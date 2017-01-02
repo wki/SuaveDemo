@@ -25,33 +25,43 @@ let measureTime task =
 
 // --- dispatching Agent
 type DispatchMsg =
-    | Begin of Uri * int
+    | Begin of System.Uri * int
     | WantWork of AsyncReplyChannel<Uri>
     | DoneWork of TimeSpan
 
-let dispatchAgent = new MailboxProcessor<DispatchMsg>(fun inbox ->
+let dispatchActor (inbox: MailboxProcessor<DispatchMsg>) =
     let rec loop(url, todo, toreceive) = async {
         let! msg = inbox.Receive()
         match msg with
         | Begin(uri, todo) ->
+            printfn "Begin: %d calls" todo
             return! loop(uri, todo, todo)
-        | WantWork replyChannel when todo > 0  -> 
+        | WantWork replyChannel when todo > 0  ->
+            printfn "Someone wants work"
             replyChannel.Reply(url)
             return! loop(url, todo-1, toreceive)
         | DoneWork timespan ->
             //  TODO: process
-            return! loop(url, todo, toreceive-1)
-        | _ -> 
+            let stillToreceive = toreceive - 1
+            printfn "Done within %0.1fms, wait for %d" (timespan.TotalMilliseconds) stillToreceive
+            return! loop(url, todo, stillToreceive)
+        | x ->
+            printfn "ignoring: %A" x 
             return! loop(url, todo, toreceive)
     }
-    loop(null, 0, 0))
+    loop(null, 0, 0)
 
-dispatchAgent.Start()
+let dispatchAgent = new MailboxProcessor<DispatchMsg>(dispatchActor)
 
 // -- downloading Agent
-let downloadAgent = new MailboxProcessor<Uri>(fun inbox -> 
+let downloadAgent = new MailboxProcessor<System.Uri>(fun inbox -> 
     let rec loop() = async {
+        // dispatchAgent.Post(WantWork)
+        dispatchAgent.PostAndReply(fun replyChannel -> WantWork replyChannel)
+
         let! uri = inbox.Receive()
+        printfn "about to download %A" uri
+
         let startTime = DateTime.Now
         let! result = download uri
         let duration = DateTime.Now - startTime
@@ -61,8 +71,6 @@ let downloadAgent = new MailboxProcessor<Uri>(fun inbox ->
     }
 
     loop())
-
-downloadAgent.Start()
 
 [<EntryPoint>]
 let main argv =
@@ -76,13 +84,16 @@ let main argv =
 
     // so sollte das gehen
     // TODO: n DownloadAgents starten 
+    dispatchAgent.Start()
     dispatchAgent.Post(Begin(uri, nrRequests))
+    downloadAgent.Start()
+
+    System.Threading.Thread.Sleep(10000);
 
     let executionTimes =
         uri
         |> Seq.replicate nrRequests
-        |> Seq.map download
-        |> Seq.map measureTime
+        |> Seq.map (download >> measureTime)
         |> Array.ofSeq
     
     printfn "Min: %0.2fms, Avg: %0.2fms, Max: %0.2fms" (Array.min(executionTimes)) (Array.average(executionTimes)) (Array.max(executionTimes))
