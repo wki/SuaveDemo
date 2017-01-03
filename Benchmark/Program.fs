@@ -24,18 +24,28 @@ let measureTime task =
     (DateTime.Now - startTime).TotalMilliseconds
 
 // --- dispatching Agent
+type Statistic = TimeSpan
 type DispatchMsg =
-    | Begin of System.Uri * int * AsyncReplyChannel<TimeSpan list>
+    | Begin of System.Uri * int * AsyncReplyChannel<Statistic list>
     | WantWork of AsyncReplyChannel<Uri>
-    | DoneWork of TimeSpan
+    | DoneWork of Statistic
 
 type DispatchState = {
-    url: Uri
+    uri: Uri
     todo: int
     toreceive: int
-    executionTimes: TimeSpan list
-    channel: AsyncReplyChannel<TimeSpan list> option
+    executionTimes: Statistic list
+    channel: AsyncReplyChannel<Statistic list> option
     lastProgressReported: DateTime
+}
+
+let defaultState = { 
+    uri = null
+    todo = 0
+    toreceive = 0
+    executionTimes = []
+    channel = None
+    lastProgressReported = DateTime.Now
 }
 
 let dispatchActor (inbox: MailboxProcessor<DispatchMsg>) =
@@ -46,10 +56,10 @@ let dispatchActor (inbox: MailboxProcessor<DispatchMsg>) =
         match msg with
         | Begin(uri, todo, r) ->
             // printfn "Begin: %d calls" todo
-            return! loop({state with url = uri; todo = todo; toreceive = todo; executionTimes = []; channel = Some r})
+            return! loop({state with uri = uri; todo = todo; toreceive = todo; executionTimes = []; channel = Some r})
         | WantWork replyChannel when state.todo > 0  ->
             // printfn "Someone wants work"
-            replyChannel.Reply(state.url)
+            replyChannel.Reply(state.uri)
             return! loop({ state with todo = state.todo - 1})
         | DoneWork timespan ->
             let stillToreceive = state.toreceive - 1
@@ -74,7 +84,7 @@ let dispatchActor (inbox: MailboxProcessor<DispatchMsg>) =
             // printf "ignoring"
             return! loop(state)
     }
-    loop({ url = null; todo = 0; toreceive = 0; executionTimes = []; channel = None; lastProgressReported = DateTime.Now })
+    loop(defaultState)
 
 let dispatchAgent = new MailboxProcessor<DispatchMsg>(dispatchActor)
 
