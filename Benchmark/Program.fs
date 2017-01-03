@@ -57,7 +57,7 @@ let dispatchActor (inbox: MailboxProcessor<DispatchMsg>) =
             printfn "quitting"
             state.channel.Value.Reply(state.executionTimes) 
             return ()
-        | _ 
+        | _ ->
             printf "ignoring"
             return! loop(state)
     }
