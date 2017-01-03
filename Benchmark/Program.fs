@@ -35,33 +35,46 @@ type DispatchState = {
     toreceive: int
     executionTimes: TimeSpan list
     channel: AsyncReplyChannel<TimeSpan list> option
+    lastProgressReported: DateTime
 }
 
 let dispatchActor (inbox: MailboxProcessor<DispatchMsg>) =
+    let progressDelay = TimeSpan.FromSeconds(2.0)
+
     let rec loop(state) = async {
         let! msg = inbox.Receive()
         match msg with
         | Begin(uri, todo, r) ->
-            printfn "Begin: %d calls" todo
+            // printfn "Begin: %d calls" todo
             return! loop({state with url = uri; todo = todo; toreceive = todo; executionTimes = []; channel = Some r})
         | WantWork replyChannel when state.todo > 0  ->
-            printfn "Someone wants work"
+            // printfn "Someone wants work"
             replyChannel.Reply(state.url)
             return! loop({ state with todo = state.todo - 1})
         | DoneWork timespan ->
-            //  TODO: process
             let stillToreceive = state.toreceive - 1
-            printfn "Done within %0.1fms, wait for %d" (timespan.TotalMilliseconds) stillToreceive
-            return! loop({state with toreceive = stillToreceive; executionTimes = timespan :: state.executionTimes})
+            let lastProgressReported =
+                if (state.lastProgressReported < DateTime.Now - progressDelay)
+                then
+                   let total = state.toreceive + List.length(state.executionTimes)
+                   let received = total - state.toreceive
+                   let percentage = 100 * received / total
+
+                   printfn "Received %d of %d (%d%%)" received total percentage 
+                   DateTime.Now
+                else
+                   state.lastProgressReported
+            // printfn "Done within %0.1fms, wait for %d" (timespan.TotalMilliseconds) stillToreceive
+            return! loop({state with toreceive = stillToreceive; executionTimes = timespan :: state.executionTimes; lastProgressReported = lastProgressReported})
         | _ when state.toreceive = 0 ->
-            printfn "quitting"
+            // printfn "quitting"
             state.channel.Value.Reply(state.executionTimes) 
             return ()
         | _ ->
-            printf "ignoring"
+            // printf "ignoring"
             return! loop(state)
     }
-    loop({ url = null; todo = 0; toreceive = 0; executionTimes = []; channel = None })
+    loop({ url = null; todo = 0; toreceive = 0; executionTimes = []; channel = None; lastProgressReported = DateTime.Now })
 
 let dispatchAgent = new MailboxProcessor<DispatchMsg>(dispatchActor)
 
