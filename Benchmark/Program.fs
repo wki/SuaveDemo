@@ -80,7 +80,7 @@ let buildDownloadAgent(i:int) = new MailboxProcessor<System.Uri>(fun inbox ->
 
     let download = (new System.Net.WebClient()).AsyncDownloadString
 
-    let measureTime task =
+    let measureTime task : Statistic =
         let startTime = DateTime.Now
         Async.RunSynchronously task |> ignore
         DateTime.Now - startTime
