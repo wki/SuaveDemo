@@ -13,16 +13,6 @@ with
             | Threads _ -> "nr of parallel threads"
             | Uri _ -> "uri to call"
 
-// Uri -> Async<string>
-let download uri =
-    let webClient = new System.Net.WebClient()
-    webClient.AsyncDownloadString(uri)
-
-let measureTime task =
-    let startTime = DateTime.Now
-    Async.RunSynchronously task |> ignore
-    (DateTime.Now - startTime).TotalMilliseconds
-
 // --- dispatching Agent
 type Statistic = TimeSpan
 type DispatchMsg =
@@ -55,10 +45,8 @@ let dispatchActor (inbox: MailboxProcessor<DispatchMsg>) =
         let! msg = inbox.Receive()
         match msg with
         | Begin(uri, todo, r) ->
-            // printfn "Begin: %d calls" todo
             return! loop({state with uri = uri; todo = todo; toreceive = todo; executionTimes = []; channel = Some r})
         | WantWork replyChannel when state.todo > 0  ->
-            // printfn "Someone wants work"
             replyChannel.Reply(state.uri)
             return! loop({ state with todo = state.todo - 1})
         | DoneWork timespan ->
@@ -74,14 +62,11 @@ let dispatchActor (inbox: MailboxProcessor<DispatchMsg>) =
                    DateTime.Now
                 else
                    state.lastProgressReported
-            // printfn "Done within %0.1fms, wait for %d" (timespan.TotalMilliseconds) stillToreceive
             return! loop({state with toreceive = stillToreceive; executionTimes = timespan :: state.executionTimes; lastProgressReported = lastProgressReported})
         | _ when state.toreceive = 0 ->
-            // printfn "quitting"
             state.channel.Value.Reply(state.executionTimes) 
             return ()
         | _ ->
-            // printf "ignoring"
             return! loop(state)
     }
     loop(defaultState)
@@ -89,26 +74,39 @@ let dispatchActor (inbox: MailboxProcessor<DispatchMsg>) =
 let dispatchAgent = new MailboxProcessor<DispatchMsg>(dispatchActor)
 
 // -- downloading Agent
-let buildDownloadAgent(i:int) = new MailboxProcessor<System.Uri>(fun inbox -> 
-    let rec loop(nr) = async {
-        let uri = dispatchAgent.PostAndReply(fun replyChannel -> WantWork replyChannel)
+let buildDownloadAgent(i:int) = new MailboxProcessor<System.Uri>(fun inbox ->
+    let receiveUri() =
+        dispatchAgent.PostAndReply(fun replyChannel -> WantWork replyChannel)
 
-        // printfn "about to download %A - Agent %d Thread %d" uri nr System.Threading.Thread.CurrentThread.ManagedThreadId
+    let download = (new System.Net.WebClient()).AsyncDownloadString
 
+    let measureTime task =
         let startTime = DateTime.Now
-        let! result = download uri
-        let duration = DateTime.Now - startTime
-        dispatchAgent.Post(DoneWork(duration))
+        Async.RunSynchronously task |> ignore
+        DateTime.Now - startTime
+
+    let issueHttpRequest = download >> measureTime
+
+    let reportStatistics = DoneWork >> dispatchAgent.Post
+
+    let rec loop(nr) = async {
+        receiveUri()
+        |> issueHttpRequest
+        |> reportStatistics
 
         return! loop(nr)
     }
 
-    // printfn "Starting DownloadAgent %d. Thread Id: %d" i System.Threading.Thread.CurrentThread.ManagedThreadId
     loop(i))
+
+let startDownloadAgent (agent: MailboxProcessor<Uri>) =
+    agent.Start()
+    agent
 
 [<EntryPoint>]
 let main argv =
-    let parser = ArgumentParser.Create<Arguments>()
+    let errorHandler = ProcessExiter(colorizer = function ErrorCode.HelpText -> None | _ -> Some ConsoleColor.Red)
+    let parser = ArgumentParser.Create<Arguments>(errorHandler = errorHandler)
     let results = parser.Parse argv
     let nrRequests = results.GetResult(<@ Requests @>, defaultValue = 100)
     let nrThreads = results.GetResult(<@ Threads @>, defaultValue = 1)
@@ -117,11 +115,10 @@ let main argv =
     printfn "Calling %A %d times, %d thread(s)" uri nrRequests nrThreads
 
     dispatchAgent.Start()
-    let downloadAgents = [1..nrThreads] |> List.map (fun i -> buildDownloadAgent(i))
-    downloadAgents |> List.iter (fun agent -> agent.Start())
+    let downloadAgents = [1..nrThreads] |> List.map (buildDownloadAgent >> startDownloadAgent)
 
     let executionTimes = List.map(fun (t:TimeSpan) -> t.TotalMilliseconds) (dispatchAgent.PostAndReply(fun r -> Begin(uri, nrRequests, r)))
 
     printfn "Min: %0.2fms, Avg: %0.2fms, Max: %0.2fms" (List.min(executionTimes)) (List.average(executionTimes)) (List.max(executionTimes))
 
-    0 // Integer-Exitcode zurückgeben
+    0

@@ -16,4 +16,4 @@ let simpleApp =
 [<EntryPoint>]
 let main argv = 
     startWebServer defaultConfig simpleApp
-    0 // Integer-Exitcode zurückgeben
+    0 // Integer-itcode zurückgeben
