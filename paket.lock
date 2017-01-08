@@ -5,6 +5,7 @@ NUGET
       NETStandard.Library (>= 1.6) - framework: >= net463, >= netstandard16
       System.Xml.XDocument (>= 4.0.11) - framework: >= net463, >= netstandard16
     FAKE (4.48)
+    FSharp.Configuration (0.6.4)
     FSharp.Core (4.0.1.7-alpha) - framework: >= net10, >= netstandard10
       Microsoft.NETCore.Platforms (>= 1.0.1) - framework: >= net463, >= netstandard16
       NETStandard.Library (>= 1.6) - framework: >= net463, >= netstandard16

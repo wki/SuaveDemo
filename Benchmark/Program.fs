@@ -1,6 +1,10 @@
 ﻿open System
 open Argu
+open FSharp.Configuration
 
+type Settings = AppSettings<"app.config">
+
+[<HelpFlags("--help", "-h")>]
 type Arguments =
     | [<AltCommandLine("-n")>] Requests of int
     | [<AltCommandLine("-c")>] Threads of int
@@ -105,6 +109,10 @@ let startDownloadAgent (agent: MailboxProcessor<Uri>) =
 
 [<EntryPoint>]
 let main argv =
+    let foo = Settings.Foo
+    let bar = Settings.Bar
+    printfn "Settings foo=%s, bar=%s" foo bar
+
     let errorHandler = ProcessExiter(colorizer = function ErrorCode.HelpText -> None | _ -> Some ConsoleColor.Red)
     let parser = ArgumentParser.Create<Arguments>(errorHandler = errorHandler)
     let results = parser.Parse argv
