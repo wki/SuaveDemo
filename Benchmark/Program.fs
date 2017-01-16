@@ -97,6 +97,12 @@ let buildDownloadAgent(i:int) = new MailboxProcessor<System.Uri>(fun inbox ->
         receiveUri()
         |> issueHttpRequest
         |> reportStatistics
+        
+        // let uri = receiveUri()
+        // let startTime = DateTime.Now
+        // let! result = download uri
+        // let statistic = DoneWork(DateTime.Now - startTime)
+        // dispatchAgent.Post statistic
 
         return! loop(nr)
     }
