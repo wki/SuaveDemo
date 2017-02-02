@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26014.0
+VisualStudioVersion = 15.0.26020.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SuaveDemo", "SuaveDemo\SuaveDemo.fsproj", "{F98FC96D-32EF-451A-85DD-162F202D41DC}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Benchmark", "Benchmark\Benchmark.fsproj", "{7C712EDC-EE31-4B61-AF1C-DDC2EEC5548C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpBenchmark", "HttpBenchmark\HttpBenchmark.csproj", "{46189E78-A53B-4090-A5D7-702023139397}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{7C712EDC-EE31-4B61-AF1C-DDC2EEC5548C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7C712EDC-EE31-4B61-AF1C-DDC2EEC5548C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7C712EDC-EE31-4B61-AF1C-DDC2EEC5548C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{46189E78-A53B-4090-A5D7-702023139397}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{46189E78-A53B-4090-A5D7-702023139397}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{46189E78-A53B-4090-A5D7-702023139397}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{46189E78-A53B-4090-A5D7-702023139397}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
