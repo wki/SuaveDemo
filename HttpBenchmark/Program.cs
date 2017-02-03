@@ -4,6 +4,7 @@ using CommandLine;
 using Akka.Routing;
 using System.Net;
 using System.IO;
+using CommandLine.Text;
 
 namespace HttpBenchmark
 {
@@ -17,6 +18,11 @@ namespace HttpBenchmark
 
         [Option('u', HelpText = "Url to download", Required = true)]
         public Uri Url { get; set; }
+
+        [HelpOption]
+        public string GetUsage() =>
+            HelpText.AutoBuild(this,
+                helptext => HelpText.DefaultParsingErrorsHandler(this, helptext));
     }
 
     public class Start { }
@@ -79,12 +85,8 @@ namespace HttpBenchmark
         static void Main(string[] args)
         {
             var options = new ProgramOptions();
-
             if (!CommandLine.Parser.Default.ParseArguments(args, options))
-            {
-                Console.WriteLine("Something went wrong with the options.");
                 Environment.Exit(1);
-            }
 
             using (var system = ActorSystem.Create("system"))
             {
