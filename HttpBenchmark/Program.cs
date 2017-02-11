@@ -4,7 +4,9 @@ using CommandLine;
 using Akka.Routing;
 using System.Net;
 using System.IO;
+using System.Linq;
 using CommandLine.Text;
+using System.Diagnostics;
 
 namespace HttpBenchmark
 {
@@ -25,51 +27,131 @@ namespace HttpBenchmark
                 helptext => HelpText.DefaultParsingErrorsHandler(this, helptext));
     }
 
+    // start manager or downloader
     public class Start { }
+
+    // request an Url to download
     public class WantWork { }
-    public class Result { }
+
+    // single download result
+    public class Result
+    {
+        public int ContentLength { get; set; }
+        public double TotalMilliseconds { get; set; }
+
+        public Result(int contentLength, double totalMilliseconds)
+        {
+            ContentLength = contentLength;
+            TotalMilliseconds = totalMilliseconds;
+        }
+    }
+
+    // total summary
+    public class Summary
+    {
+        public int NrDownloads { get; set; }
+        public double TotalMilliseconds { get; set; }
+
+        public Summary()
+        {
+            NrDownloads = 0;
+            TotalMilliseconds = 0;
+        }
+
+        public void AddResult(Result result)
+        {
+            NrDownloads++;
+            TotalMilliseconds += result.TotalMilliseconds;
+            // content length?
+        }
+    }
 
     // handle all things
     public class Manager : ReceiveActor
     {
-        private IActorRef downloader;
+        private IActorRef requestor;
 
-        public Manager(IActorRef downloader, string url)
+        private ProgramOptions options;
+        private Summary summary;
+        private int NrRequestsSent;
+        private int NrResponsesReceived;
+
+        public Manager(ProgramOptions options)
         {
-            this.downloader = downloader;
+            this.options = options;
+            NrRequestsSent = 0;
+            NrResponsesReceived = 0;
+            summary = new Summary();
 
-            Receive<WantWork>(_ => Sender.Tell(url));
+            Receive<WantWork>(_ => DispatchWork());
             Receive<Result>(r => SaveResult(r));
+            Receive<Start>(s => Start(s));
 
-            downloader.Tell(new Start());
+            for (var i = 1; i < options.Concurrency; i++)
+            {
+                Context
+                    .ActorOf(Props.Create<Downloader>(Self), $"downloader-{i}");
+            }
+        }
+
+        private void Start(Start start)
+        {
+            requestor = Sender;
+
+            Context
+                .GetChildren().ToList()
+                .ForEach(c => c.Tell(start));
+        }
+
+        private void DispatchWork()
+        {
+            if (NrRequestsSent < options.NrRequests)
+            {
+                NrRequestsSent++;
+                Sender.Tell(options.Url);
+            }
         }
 
         private void SaveResult(Result result)
         {
-            // ...
-            Context.System.Terminate();
+            NrResponsesReceived++;
+            summary.AddResult(result);
+
+            if (NrResponsesReceived >= options.NrRequests)
+            {
+                // TODO: print output
+                requestor.Tell(summary);
+            }
         }
     }
 
     // via Broadcast informed about start/stop
     public class Downloader : ReceiveActor
     {
-        public Downloader()
+        private Stopwatch stopwatch;
+        private IActorRef manager;
+
+        public Downloader(IActorRef manager)
         {
+            this.manager = manager;
+
             Receive<Start>(_ => Sender.Tell(new WantWork()));
             Receive<Uri>(url => StartDownload(url));
             Receive<WebResponse>(r => HandleWebResponse(r));
-            Receive<string>(s => { }); // do nothing
+            Receive<string>(s => ProcessDownload(s)); // do nothing
         }
 
+        // 1st stage of a download - start web request
         private void StartDownload(Uri url)
         {
-            // start download, wait, pipe result into self
-            // var webClient = new System.Net.WebClient();
+            stopwatch = new Stopwatch();
+            stopwatch.Start();
+
             var webRequest = WebRequest.Create(url);
             webRequest.GetResponseAsync().PipeTo(Self);
         }
 
+        // 2nd stage of a download - handle response and start downloading content
         private void HandleWebResponse(WebResponse response)
         {
             using (var s = response.GetResponseStream())
@@ -77,6 +159,16 @@ namespace HttpBenchmark
             {
                 reader.ReadToEndAsync().PipeTo(Self);
             }
+        }
+
+        // 3rd and final stage of a download - process result
+        private void ProcessDownload(string s)
+        {
+            stopwatch.Stop();
+
+            manager.Tell(new Result(s.Length, stopwatch.Elapsed.TotalMilliseconds));
+
+            manager.Tell(new WantWork());
         }
     }
 
@@ -90,13 +182,9 @@ namespace HttpBenchmark
 
             using (var system = ActorSystem.Create("system"))
             {
+                var manager = system.ActorOf(Props.Create<Manager>(options), "manager");
 
-                var downloaderProps =
-                    Props.Create<Downloader>()
-                         .WithRouter(new BroadcastPool(options.Concurrency));
-                var downloader = system.ActorOf(downloaderProps, "downloader");
-
-                var manager = system.ActorOf(Props.Create<Manager>(downloader, options.Url, options.NrRequests), "manager");
+                var result = manager.Ask<Summary>(new Start()).Result;
             }
         }
     }

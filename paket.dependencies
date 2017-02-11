@@ -3,3 +3,5 @@ nuget Fake
 nuget FSharp.Configuration
 nuget Argu
 nuget Suave
+nuget Akka
+nuget CommandLineParser
