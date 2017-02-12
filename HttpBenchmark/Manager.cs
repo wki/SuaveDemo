@@ -10,6 +10,7 @@ namespace HttpBenchmark
 
         private IActorRef requestor;
         private List<IActorRef> downloaders;
+        private IActorRef statusReporter;
 
         // what we want
         private ProgramOptions options;
@@ -24,21 +25,27 @@ namespace HttpBenchmark
 
             Receive<WantWork>(_ => DispatchWork());
             Receive<Result>(r => SaveResult(r));
-            Receive<Start>(s => Start(s));
+            Receive<Start>(_ => StartDownloading());
 
             downloaders = new List<IActorRef>();
             for (var i = 1; i < options.Concurrency; i++)
             {
                 downloaders.Add(
-                    Context.ActorOf(Props.Create<Downloader>(Self), $"{DownloadAgentPrefix}{i}")
+                    Context.ActorOf(
+                        Props.Create<Downloader>(Self), 
+                        $"{DownloadAgentPrefix}{i}"
+                    )
                 );
             }
+
+            statusReporter = Context.ActorOf(Props.Create<StatusReporter>(), "status");
+            statusReporter.Tell(summary);
         }
 
-        private void Start(Start start)
+        private void StartDownloading()
         {
             requestor = Sender;
-            downloaders.ForEach(d => d.Tell(start));
+            downloaders.ForEach(d => d.Tell(Start.Instance));
         }
 
         private void DispatchWork()

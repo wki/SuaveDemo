@@ -49,6 +49,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Result.cs" />
     <Compile Include="Start.cs" />
+    <Compile Include="StatusReporter.cs" />
     <Compile Include="Summary.cs" />
     <Compile Include="WantWork.cs" />
   </ItemGroup>

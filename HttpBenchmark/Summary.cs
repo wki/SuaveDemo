@@ -17,6 +17,9 @@
             TotalMilliseconds = 0;
         }
 
+        public bool NothingRequestedYet() =>
+            NrRequestsSent == 0;
+
         public bool NeedMoreRequests() =>
             NrRequestsSent < NrRequestsToDo;
 
