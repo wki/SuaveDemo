@@ -3,18 +3,29 @@
     // total summary
     public class Summary
     {
-        public int NrDownloads { get; set; }
+        public int NrRequestsToDo { get; set; }
+        public int NrRequestsSent { get; set; }
+        public int NrResponsesReceived { get; set; }
+
         public double TotalMilliseconds { get; set; }
 
-        public Summary()
+        public Summary(int nrRequestsToDo)
         {
-            NrDownloads = 0;
+            NrRequestsToDo = 0;
+            NrRequestsSent = 0;
+            NrResponsesReceived = 0;
             TotalMilliseconds = 0;
         }
 
+        public bool NeedMoreRequests() =>
+            NrRequestsSent < NrRequestsToDo;
+
+        public bool AllResponsesReceived() =>
+            NrResponsesReceived >= NrRequestsToDo;
+
         public void AddResult(Result result)
         {
-            NrDownloads++;
+            NrRequestsSent++;
             TotalMilliseconds += result.TotalMilliseconds;
             // content length?
         }

@@ -15,7 +15,7 @@ namespace HttpBenchmark
             {
                 var manager = system.ActorOf(Props.Create<Manager>(options), "manager");
 
-                var result = manager.Ask<Summary>(new Start()).Result;
+                var summary = manager.Ask<Summary>(Start.Instance).Result;
             }
         }
     }

@@ -1,4 +1,6 @@
-﻿namespace HttpBenchmark
+﻿using System.Diagnostics;
+
+namespace HttpBenchmark
 {
     // single download result
     public class Result
@@ -11,5 +13,11 @@
             ContentLength = contentLength;
             TotalMilliseconds = totalMilliseconds;
         }
+
+        public static Result From(string s, Stopwatch stopwatch) =>
+            new Result(s.Length, stopwatch.Elapsed.TotalMilliseconds);
+
+        public static Result From(int contentLenth, double totalMilliseconds) =>
+            new Result(contentLenth, totalMilliseconds);
     }
 }

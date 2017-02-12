@@ -16,7 +16,7 @@ namespace HttpBenchmark
         {
             this.manager = manager;
 
-            Receive<Start>(_ => Sender.Tell(new WantWork()));
+            Receive<Start>(_ => Sender.Tell(WantWork.Instance));
             Receive<Uri>(url => StartDownload(url));
             Receive<WebResponse>(r => HandleWebResponse(r));
             Receive<string>(s => ProcessDownload(s)); // do nothing
@@ -47,9 +47,8 @@ namespace HttpBenchmark
         {
             stopwatch.Stop();
 
-            manager.Tell(new Result(s.Length, stopwatch.Elapsed.TotalMilliseconds));
-
-            manager.Tell(new WantWork());
+            manager.Tell(Result.From(s, stopwatch));
+            manager.Tell(WantWork.Instance);
         }
     }
 }
