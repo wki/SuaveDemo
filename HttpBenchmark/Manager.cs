@@ -3,7 +3,9 @@ using System.Collections.Generic;
 
 namespace HttpBenchmark
 {
-    // handle all things
+    /// <summary>
+    /// Orchestrating actor controlling the whole downloading process
+    /// </summary>
     public class Manager : ReceiveActor
     {
         private const string DownloadAgentPrefix = "download-";
@@ -76,7 +78,6 @@ namespace HttpBenchmark
 
             if (summary.AllResponsesReceived())
             {
-                // TODO: print output
                 requestor.Tell(summary);
             }
         }

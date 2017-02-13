@@ -3,6 +3,9 @@ using System;
 
 namespace HttpBenchmark
 {
+    /// <summary>
+    /// Responsible for printing reports based on various stages or elapsed time
+    /// </summary>
     public class StatusReporter : ReceiveActor
     {
         private class Tick { }

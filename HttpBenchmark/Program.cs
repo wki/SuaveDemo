@@ -3,6 +3,9 @@ using Akka.Actor;
 
 namespace HttpBenchmark
 {
+    /// <summary>
+    /// Main Program controlling all actions via commandline arguments
+    /// </summary>
     public class Program
     {
         static void Main(string[] args)

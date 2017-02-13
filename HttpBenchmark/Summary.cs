@@ -1,6 +1,8 @@
 ﻿namespace HttpBenchmark
 {
-    // total summary
+    /// <summary>
+    /// Total summary for the entire download operation
+    /// </summary>
     public class Summary
     {
         public int NrRequestsToDo { get; set; }

@@ -1,6 +1,8 @@
 ﻿namespace HttpBenchmark
 {
-    // start manager or downloader
+    /// <summary>
+    /// Command message instructing Manager or Downloader to start
+    /// </summary>
     public class Start
     {
         private static Start instance;

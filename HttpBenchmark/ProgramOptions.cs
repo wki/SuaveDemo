@@ -5,6 +5,9 @@ using System.Linq;
 
 namespace HttpBenchmark
 {
+    /// <summary>
+    /// Commandline options for our commandline program
+    /// </summary>
     public class ProgramOptions
     {
         [Option('n', HelpText = "Nr of Requests", Required = true)]

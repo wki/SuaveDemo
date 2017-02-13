@@ -6,7 +6,9 @@ using System.Diagnostics;
 
 namespace HttpBenchmark
 {
-    // via Broadcast informed about start/stop
+    /// <summary>
+    /// Parallel running download actor operating in pull mode
+    /// </summary>
     public class Downloader : ReceiveActor
     {
         private Stopwatch stopwatch;

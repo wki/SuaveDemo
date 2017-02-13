@@ -1,6 +1,8 @@
 ﻿namespace HttpBenchmark
 {
-    // request an Url to download
+    /// <summary>
+    /// Query message from downloader to manager to request a unit of work
+    /// </summary>
     public class WantWork
     {
         private static WantWork instance;

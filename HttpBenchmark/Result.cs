@@ -2,7 +2,9 @@
 
 namespace HttpBenchmark
 {
-    // single download result
+    /// <summary>
+    /// Result for a single download
+    /// </summary>
     public class Result
     {
         public int ContentLength { get; set; }
