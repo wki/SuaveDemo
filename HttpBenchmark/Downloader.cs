@@ -11,15 +11,24 @@ namespace HttpBenchmark
     {
         private Stopwatch stopwatch;
         private IActorRef manager;
+        private IActorRef verboseReporter;
 
-        public Downloader(IActorRef manager)
+        public Downloader(IActorRef manager, IActorRef verboseReporter)
         {
             this.manager = manager;
+            this.verboseReporter = verboseReporter;
 
-            Receive<Start>(_ => Sender.Tell(WantWork.Instance));
+            Receive<Start>(_ => StartOperation());
             Receive<Uri>(url => StartDownload(url));
             Receive<WebResponse>(r => HandleWebResponse(r));
             Receive<string>(s => ProcessDownload(s)); // do nothing
+        }
+
+        // start operation
+        private void StartOperation()
+        {
+            verboseReporter?.Tell($"{Self.Path.Name}: starting");
+            Sender.Tell(WantWork.Instance);
         }
 
         // 1st stage of a download - start web request

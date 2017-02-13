@@ -11,7 +11,7 @@
 
         public Summary(int nrRequestsToDo)
         {
-            NrRequestsToDo = 0;
+            NrRequestsToDo = nrRequestsToDo;
             NrRequestsSent = 0;
             NrResponsesReceived = 0;
             TotalMilliseconds = 0;
@@ -28,7 +28,7 @@
 
         public void AddResult(Result result)
         {
-            NrRequestsSent++;
+            NrResponsesReceived++;
             TotalMilliseconds += result.TotalMilliseconds;
             // content length?
         }

@@ -11,6 +11,7 @@ namespace HttpBenchmark
         private IActorRef requestor;
         private List<IActorRef> downloaders;
         private IActorRef statusReporter;
+        private IActorRef verboseReporter;
 
         // what we want
         private ProgramOptions options;
@@ -27,29 +28,36 @@ namespace HttpBenchmark
             Receive<Result>(r => SaveResult(r));
             Receive<Start>(_ => StartDownloading());
 
+            statusReporter = Context.ActorOf(Props.Create<StatusReporter>(), "status");
+            verboseReporter = options.Verbose ? statusReporter : null;
+
+            verboseReporter?.Tell("Starting up...");
+            statusReporter.Tell(summary);
+
             downloaders = new List<IActorRef>();
-            for (var i = 1; i < options.Concurrency; i++)
+            for (var i = 1; i <= options.Concurrency; i++)
             {
+                verboseReporter?.Tell($"Starting Downloader #{i}...");
                 downloaders.Add(
                     Context.ActorOf(
-                        Props.Create<Downloader>(Self), 
+                        Props.Create<Downloader>(Self, verboseReporter), 
                         $"{DownloadAgentPrefix}{i}"
                     )
                 );
             }
-
-            statusReporter = Context.ActorOf(Props.Create<StatusReporter>(), "status");
-            statusReporter.Tell(summary);
         }
 
         private void StartDownloading()
         {
+            verboseReporter?.Tell("Telling downloaders to start");
             requestor = Sender;
             downloaders.ForEach(d => d.Tell(Start.Instance));
         }
 
         private void DispatchWork()
         {
+            verboseReporter?.Tell($"Request from {Sender.Path.Name}");
+
             if (summary.NeedMoreRequests())
             {
                 summary.NrRequestsSent++;
@@ -59,8 +67,12 @@ namespace HttpBenchmark
 
         private void SaveResult(Result result)
         {
+            verboseReporter?.Tell($"Result from {Sender.Path.Name}: {result.TotalMilliseconds:N1}ms");
+
             summary.NrResponsesReceived++;
             summary.AddResult(result);
+
+            statusReporter.Tell(summary);
 
             if (summary.AllResponsesReceived())
             {

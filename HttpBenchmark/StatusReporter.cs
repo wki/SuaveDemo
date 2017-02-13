@@ -8,9 +8,11 @@ namespace HttpBenchmark
         private class Tick { }
 
         private Summary lastKnownSummary;
+        private bool reportedFinish;
 
         public StatusReporter()
         {
+            reportedFinish = false;
             var tick = new Tick();
 
             Context.System.Scheduler.ScheduleTellRepeatedly(
@@ -22,6 +24,7 @@ namespace HttpBenchmark
 
             Receive<Summary>(s => ReportSummary(s));
             Receive<Tick>(_ => ReportPeriodicalStatus());
+            Receive<string>(s => Console.WriteLine(s));
         }
 
         private void ReportSummary(Summary summary)
@@ -30,7 +33,11 @@ namespace HttpBenchmark
             if (summary.NothingRequestedYet())
                 Console.WriteLine("Starting to download {0} requests...", summary.NrRequestsToDo);
             else if (summary.AllResponsesReceived())
-                Console.WriteLine("Finished downloading.");
+            {
+                if (!reportedFinish)
+                    Console.WriteLine("Finished downloading.");
+                reportedFinish = true;
+            }
         }
 
         private void ReportPeriodicalStatus()
